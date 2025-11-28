@@ -1,65 +1,173 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import DevintCard from './components/DevintCard';
+import BookDevintPopup from './components/BookDevintPopup';
+import Toast from './components/Toast';
+
+interface Booking {
+  id: string;
+  name: string;
+  jiraLink: string;
+  projectTitle: string;
+  participants: string;
+  teams: string[];
+  devint: string;
+  startDate: string;
+  endDate: string;
+  jiraStatus: string;
+  devintOwner: string;
+  status: string;
+}
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [showBookPopup, setShowBookPopup] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const authStatus = localStorage.getItem('isAuthenticated');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+      // Load bookings from localStorage
+      const savedBookings = localStorage.getItem('bookings');
+      if (savedBookings) {
+        setBookings(JSON.parse(savedBookings));
+      }
+    } else {
+      router.push('/login');
+    }
+    setIsLoading(false);
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    router.push('/login');
+  };
+
+  const handleBookClick = () => {
+    if (bookings.length >= 2) {
+      setToast({
+        message: 'You cannot Book Devint - Maximum Limit Reached',
+        type: 'error',
+      });
+      return;
+    }
+    setShowBookPopup(true);
+  };
+
+  const handleBook = (bookingData: any) => {
+    const newBooking: Booking = {
+      id: Date.now().toString(),
+      ...bookingData,
+      jiraStatus: 'Ready for devint qa',
+      devintOwner: 'vardaan',
+      status: 'Ready for devint qa',
+    };
+    const updatedBookings = [...bookings, newBooking];
+    setBookings(updatedBookings);
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    setToast({
+      message: 'Devint booked successfully!',
+      type: 'success',
+    });
+  };
+
+  const handleUnBook = (bookingId: string) => {
+    const updatedBookings = bookings.filter((b) => b.id !== bookingId);
+    setBookings(updatedBookings);
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    setToast({
+      message: 'Devint un-booked successfully!',
+      type: 'success',
+    });
+  };
+
+  const handleDeploySuccess = () => {
+    setToast({
+      message: 'Deploy successful!',
+      type: 'success',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="text-lg text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-black">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      )}
+
+      <nav className="border-b border-gray-800 bg-black">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <h1 className="text-xl font-semibold text-white">Devint Booking</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBookClick}
+                className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              >
+                Book a Devint
+              </button>
+              <button
+                onClick={handleLogout}
+                className="rounded border border-gray-700 bg-black px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-900 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </nav>
+
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-white">My Devints</h2>
+        </div>
+        <div className="space-y-3">
+          {bookings.length === 0 && (
+            <DevintCard 
+              name="devintam3" 
+              onDeploySuccess={handleDeploySuccess}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {bookings.map((booking) => (
+            <DevintCard
+              key={booking.id}
+              name={booking.devint}
+              bookingData={booking}
+              onUnBook={() => handleUnBook(booking.id)}
+              onDeploySuccess={handleDeploySuccess}
+            />
+          ))}
         </div>
       </main>
+
+      {showBookPopup && (
+        <BookDevintPopup
+          onClose={() => setShowBookPopup(false)}
+          onBook={handleBook}
+        />
+      )}
     </div>
   );
 }
